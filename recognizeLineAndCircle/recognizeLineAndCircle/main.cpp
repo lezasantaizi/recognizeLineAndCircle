@@ -39,7 +39,7 @@ int main(int argc, char** argv)
 	hough_2d = new int *[hough_space]; 
 	for (int i =0;i<hough_space;i++)
 	{
-		hough_2d[i] = new int[2*max_length];
+		hough_2d[i] = new int[2*max_length];//max and -max
 	}
 
 	for (int i = 0;i < hough_space;i++)
@@ -57,16 +57,22 @@ int main(int argc, char** argv)
 		{
 			int p = dst.at<uchar>(row,col) & 0xff;  
 			if(p == 0) continue; // which means background color  
-			for(int cell=0; cell < hough_space; cell++ ) 
+			for(int theta=0; theta < hough_space; theta++ ) 
 			{  
-				max = (int)((col - centerX) * cos(cell * hough_interval) 
-					+ (row - centerY) * sin(cell * hough_interval));  
-				max += max_length;   
-				if (max < 0 || (max >= 2 * max_length)) 
+				//max = (int)((col - centerX) * cos(cell * hough_interval) 
+				//	+ (row - centerY) * sin(cell * hough_interval));  
+				//max += max_length;   
+				//为了让二维数组hough_2d的第二维可以从0变化到2*max_length,所以设置让col和row都
+				//减去了width和height的1/2.
+				int r = (int)((col - centerX) * cos(theta * hough_interval) 
+					+ (row - centerY) * sin(theta * hough_interval));  
+				r += max_length/2;   // start from zero, not (-max_length)  
+
+				if (r < 0 || (r >= 2 * max_length)) 
 				{
 					continue;  
 				}  
-				hough_2d[cell][max] +=1;  
+				hough_2d[theta][r] +=1;  
 			}  
 		}
 	}
@@ -83,17 +89,17 @@ int main(int argc, char** argv)
 	// transfer back to image pixels space from hough parameter space
 	int hough_threshold = (int)(threshold * max_hough);
 
-	for(int row = 0; row < hough_space; row++) {
-		for(int col = 0; col < 2*max_length; col++) {
-			if(hough_2d[row][col] < hough_threshold) // discard it
+	for(int theta = 0; theta < hough_space; theta++) {
+		for(int r = 0; r < 2*max_length; r++) {
+			if(hough_2d[theta][r] < hough_threshold) // discard it
 				continue;
-			int hough_value = hough_2d[row][col];
+			int hough_value = hough_2d[theta][r];
 			bool isLine = true;
-			for(int i=-1; i<2; i++) {
+			for(int i=-1; i<2; i++) {//为了补偿sqrt(2.0)带来的max_length向下取整导致的误差
 				for(int j=-1; j<2; j++) {
 					if(i != 0 || j != 0) {
-						int yf = row + i;
-						int xf = col + j;
+						int yf = theta + i;
+						int xf = r + j;
 						if(xf < 0) continue;
 						if(xf < 2*max_length) {
 							if (yf < 0) {
@@ -114,18 +120,18 @@ int main(int argc, char** argv)
 			if(!isLine) continue;
 
 			// transform back to pixel data now...
-			double dy = sin(row * hough_interval);
-			double dx = cos(row * hough_interval);
-			if ((row <= hough_space / 4) || (row >= 3 * hough_space / 4)) {
+			double dy = sin(theta * hough_interval);
+			double dx = cos(theta * hough_interval);
+			if ((theta <= hough_space / 4) || (theta >= 3 * hough_space / 4)) {
 				for (int subrow = 0; subrow < height; ++subrow) {
-					int subcol = (int)((col - max_length - ((subrow - centerY) * dy)) / dx) + centerX;
+					int subcol = (int)((r - max_length - ((subrow - centerY) * dy)) / dx) + centerX;
 					if ((subcol < width) && (subcol >= 0)) {
 						image_2d[subrow][subcol] = -16776961;
 					}
 				}
 			} else {
 				for (int subcol = 0; subcol < width; ++subcol) {
-					int subrow = (int)((col - max_length - ((subcol - centerX) * dx)) / dy) + centerY;
+					int subrow = (int)((r - max_length - ((subcol - centerX) * dx)) / dy) + centerY;
 					if ((subrow < height) && (subrow >= 0)) {
 						image_2d[subrow][subcol] = -16776961;
 					}
