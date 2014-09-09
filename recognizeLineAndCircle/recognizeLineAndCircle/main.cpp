@@ -22,7 +22,8 @@ int main(int argc, char** argv)
 	}
 	Mat dst, cdst;
 	Canny(src, dst, 50, 200, 3);
-
+	namedWindow("hello1");
+	imshow("hello1",dst);
 	//cvtColor(dst, cdst, CV_GRAY2BGR);
 
 	int width = dst.cols;
@@ -30,8 +31,8 @@ int main(int argc, char** argv)
 	int centerX = width / 2;  
 	int centerY = height / 2;  
 	int hough_space = 500;
-	double hough_interval = 3.1415926/hough_space;  
-	double threshold = 0.8;
+	double hough_interval = 2*3.1415926/hough_space;  
+	double threshold = 0.5;//调整阈值可以达到检测的线条数目
 
 	int max = MAX(width, height);  
 	int max_length = (int)(sqrt(2.0) * max);  
@@ -120,20 +121,20 @@ int main(int argc, char** argv)
 			if(!isLine) continue;
 
 			// transform back to pixel data now...
-			double dy = sin(theta * hough_interval);
-			double dx = cos(theta * hough_interval);
+			double siny = sin(theta * hough_interval);
+			double cosx = cos(theta * hough_interval);
 			if ((theta <= hough_space / 4) || (theta >= 3 * hough_space / 4)) {
 				for (int subrow = 0; subrow < height; ++subrow) {
-					int subcol = (int)((r - max_length - ((subrow - centerY) * dy)) / dx) + centerX;
+					int subcol = (int)((r - max_length/2 - ((subrow - centerY) * siny)) / cosx) + centerX;
 					if ((subcol < width) && (subcol >= 0)) {
-						image_2d[subrow][subcol] = -16776961;
+						dst.at<uchar>(subrow,subcol)= 255;
 					}
 				}
 			} else {
 				for (int subcol = 0; subcol < width; ++subcol) {
-					int subrow = (int)((r - max_length - ((subcol - centerX) * dx)) / dy) + centerY;
+					int subrow = (int)((r - max_length/2 - ((subcol - centerX) * cosx)) / siny) + centerY;
 					if ((subrow < height) && (subrow >= 0)) {
-						image_2d[subrow][subcol] = -16776961;
+						dst.at<uchar>(subrow,subcol) = 255;
 					}
 				}
 			}
